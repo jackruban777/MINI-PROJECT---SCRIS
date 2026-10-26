@@ -17,14 +17,32 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const extractUser = (res: any): User | null => {
-  if (!res) return null;
-  if (res.user && typeof res.user === 'object') {
-    return extractUser(res.user);
+  if (!res || typeof res !== 'object') return null;
+
+  // Case 1: Wrapped under user (e.g. { user: { id, role, ... } })
+  if (res.user && typeof res.user === 'object' && res.user.id) {
+    return res.user as User;
   }
+  // Case 2: Wrapped under data (e.g. { data: { user: { id, role, ... } } })
   if (res.data && typeof res.data === 'object') {
-    return extractUser(res.data);
+    if (res.data.user && typeof res.data.user === 'object' && res.data.user.id) {
+      return res.data.user as User;
+    }
+    if (res.data.id && (res.data.role || res.data.email)) {
+      return res.data as User;
+    }
   }
-  return res as User;
+  // Case 3: Direct User object (e.g. { id, role, email, ... })
+  if (res.id && (res.role || res.email)) {
+    return res as User;
+  }
+
+  // Fallback: Check if response has studentProfile or teacherProfile
+  if (res.studentProfile || res.teacherProfile) {
+    return res as User;
+  }
+
+  return null;
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
