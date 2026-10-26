@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, UserRole } from '../types';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, setAuthToken, clearAuthToken } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -20,12 +20,12 @@ const extractUser = (res: any): User | null => {
   if (!res || typeof res !== 'object') return null;
 
   // Case 1: Wrapped under user (e.g. { user: { id, role, ... } })
-  if (res.user && typeof res.user === 'object' && res.user.id) {
+  if (res.user && typeof res.user === 'object' && (res.user.id || res.user.role || res.user.email)) {
     return res.user as User;
   }
   // Case 2: Wrapped under data (e.g. { data: { user: { id, role, ... } } })
   if (res.data && typeof res.data === 'object') {
-    if (res.data.user && typeof res.data.user === 'object' && res.data.user.id) {
+    if (res.data.user && typeof res.data.user === 'object' && (res.data.user.id || res.data.user.role)) {
       return res.data.user as User;
     }
     if (res.data.id && (res.data.role || res.data.email)) {
@@ -67,6 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (credentials: { email: string; password: string; role?: UserRole }): Promise<User> => {
     const response = await api.post<any>('/auth/login', credentials);
+    if (response?.token) {
+      setAuthToken(response.token);
+    }
     const currentUser = extractUser(response);
     if (!currentUser) {
       throw new Error('Authentication failed. No user details returned.');
@@ -77,6 +80,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerStudent = async (data: any): Promise<User> => {
     const response = await api.post<any>('/auth/register-student', data);
+    if (response?.token) {
+      setAuthToken(response.token);
+    }
     const currentUser = extractUser(response);
     if (!currentUser) {
       throw new Error('Registration failed. No student details returned.');
@@ -87,6 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerTeacher = async (data: any): Promise<User> => {
     const response = await api.post<any>('/auth/register-teacher', data);
+    if (response?.token) {
+      setAuthToken(response.token);
+    }
     const currentUser = extractUser(response);
     if (!currentUser) {
       throw new Error('Registration failed. No teacher details returned.');
@@ -101,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
+      clearAuthToken();
       setUser(null);
     }
   };

@@ -10,12 +10,39 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `/api/v1${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+const API_BASE = (import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
 
-  const defaultHeaders: HeadersInit = {
+export const setAuthToken = (token: string) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('scris_auth_token', token);
+  }
+};
+
+export const getAuthToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('scris_auth_token');
+  }
+  return null;
+};
+
+export const clearAuthToken = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('scris_auth_token');
+  }
+};
+
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}/api/v1${path}`;
+
+  const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+
+  const token = getAuthToken();
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(url, {
     ...options,
@@ -26,16 +53,23 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     credentials: 'include', // Include HTTP-only cookies
   });
 
-  const contentType = response.headers.get('content-type');
+  const contentType = response.headers.get('content-type') || '';
   let data: any;
 
-  if (contentType && contentType.includes('application/json')) {
+  if (contentType.includes('application/json')) {
     data = await response.json();
-  } else if (contentType && (contentType.includes('application/pdf') || contentType.includes('text/csv'))) {
+  } else if (contentType.includes('application/pdf') || contentType.includes('text/csv')) {
     // Return blob for file downloads
     return (await response.blob()) as unknown as T;
   } else {
     data = await response.text();
+    // Guard against SPA fallback where static host serves index.html instead of hitting API
+    if (typeof data === 'string' && (data.trim().startsWith('<!DOCTYPE html') || data.trim().startsWith('<html') || data.trim().startsWith('<!doctype'))) {
+      throw new ApiError(
+        'Backend API unreachable (received HTML from static host). Please configure VITE_API_URL in your frontend deployment to point to your backend service URL (e.g. https://scris-backend.onrender.com).',
+        'API_URL_NOT_CONFIGURED'
+      );
+    }
   }
 
   if (!response.ok) {
