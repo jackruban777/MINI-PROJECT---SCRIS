@@ -1,0 +1,100 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  :root {
+    --primary-blue: #2563EB;
+    --navy-dark: #1E3A5F;
+    --light-blue: #EFF6FF;
+    --surface-white: #FFFFFF;
+    --page-bg: #F8FAFC;
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+    --border-color: #E2E8F0;
+  }
+
+  body {
+    background-color: var(--page-bg);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--navy-dark);
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  /* Solid professional card design - No glassmorphism */
+  .card-solid {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+  }
+
+  /* Academic badge styles */
+  .badge-safe {
+    background-color: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+  }
+
+  .badge-watch {
+    background-color: #FFFBEB;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  }
+
+  .badge-critical {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+  }
+
+  .badge-info {
+    background-color: #EFF6FF;
+    color: #1E40AF;
+    border: 1px solid #BFDBFE;
+  }
+
+  /* Clean table styles */
+  .table-academic {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .table-academic th {
+    background-color: #F8FAFC;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #E2E8F0;
+    text-align: left;
+  }
+
+  .table-academic td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #F1F5F9;
+    font-size: 0.875rem;
+    color: #1E293B;
+  }
+
+  .table-academic tr:last-child td {
+    border-bottom: none;
+  }
+
+  .table-academic tr:hover td {
+    background-color: #F8FAFC;
+  }
+}

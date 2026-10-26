@@ -1,0 +1,349 @@
+// SCRIS — Student Course Completion Risk and Intervention System
+// Prisma Schema Definition
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(uuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  role         String          // "STUDENT" | "TEACHER" | "ADMIN"
+  department   String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  studentProfile Student?
+  teacherProfile Teacher?
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+  importBatches  AcademicImportBatch[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Student {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registerNumber  String   @unique
+  degree          String
+  batchYear       Int
+  currentSemester Int
+  section         String
+  advisorId       String?
+  advisor         Teacher? @relation(fields: [advisorId], references: [id])
+  phone           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  enrollments         Enrollment[]
+  internalAssessments InternalAssessment[]
+  semesterResults     SemesterResult[]
+  attendanceRecords   AttendanceRecord[]
+  arrears             Arrear[]
+  riskSnapshots       RiskSnapshot[]
+  interventions       Intervention[]
+
+  @@index([registerNumber])
+  @@index([advisorId])
+  @@index([currentSemester])
+}
+
+model Teacher {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffId     String   @unique
+  designation String
+  department  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  advisees             Student[]
+  interventionsManaged Intervention[]
+
+  @@index([staffId])
+  @@index([department])
+}
+
+model Subject {
+  id         String   @id @default(uuid())
+  code       String
+  name       String
+  credits    Int
+  semester   Int
+  department String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  enrollments         Enrollment[]
+  internalAssessments InternalAssessment[]
+  semesterResults     SemesterResult[]
+  attendanceRecords   AttendanceRecord[]
+  arrears             Arrear[]
+  timetableEntries    TimetableEntry[]
+  interventions       Intervention[]
+
+  @@unique([code, department])
+  @@index([code])
+  @@index([semester])
+  @@index([department])
+}
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  semester  Int
+  status    String   @default("ACTIVE") // "ACTIVE" | "COMPLETED" | "DROPPED"
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, subjectId, semester])
+  @@index([studentId])
+  @@index([subjectId])
+}
+
+model InternalAssessment {
+  id             String   @id @default(uuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  assessmentType String   // "CAT-1" | "CAT-2" | "Assignment" | "Model Exam"
+  score          Float
+  maxScore       Float
+  assessmentDate DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([assessmentType])
+}
+
+model SemesterResult {
+  id            String   @id @default(uuid())
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId     String
+  subject       Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  semester      Int
+  grade         String   // "O", "A+", "A", "B+", "B", "C", "RA" (Re-appear)
+  gradePoint    Float
+  credits       Int
+  attemptNumber Int      @default(1)
+  status        String   // "PASS" | "FAIL"
+  createdAt     DateTime @default(now())
+
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([semester])
+}
+
+model AttendanceRecord {
+  id              String   @id @default(uuid())
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId       String
+  subject         Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  semester        Int
+  attendedClasses Int
+  totalClasses    Int
+  percentage      Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([studentId, subjectId, semester])
+  @@index([studentId])
+  @@index([subjectId])
+}
+
+model Arrear {
+  id               String    @id @default(uuid())
+  studentId        String
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId        String
+  subject          Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  originalSemester Int
+  attempts         Int       @default(1)
+  deadlineSemester Int?
+  status           String    @default("PENDING") // "PENDING" | "CLEARED"
+  clearedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([status])
+}
+
+model Timetable {
+  id           String           @id @default(uuid())
+  department   String
+  semester     Int
+  section      String
+  academicYear String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  entries      TimetableEntry[]
+
+  @@unique([department, semester, section, academicYear])
+}
+
+model TimetableEntry {
+  id          String     @id @default(uuid())
+  timetableId String
+  timetable   Timetable  @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  entryType   String     // "LECTURE" | "LAB" | "INTERNAL_ASSESSMENT" | "SEMESTER_EXAM"
+  dayOfWeek   String?    // "Monday", "Tuesday", etc.
+  startTime   String     // "09:00"
+  endTime     String     // "10:00"
+  room        String
+  subjectId   String?
+  subject     Subject?   @relation(fields: [subjectId], references: [id])
+  examDate    DateTime?
+  description String?
+
+  @@index([timetableId])
+  @@index([subjectId])
+  @@index([examDate])
+}
+
+model RiskSnapshot {
+  id                  String   @id @default(uuid())
+  studentId           String
+  student             Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semester            Int
+  score               Float    // 0 - 100
+  category            String   // "SAFE" | "WATCH" | "CRITICAL"
+  explanation         String
+  contributingFactors String   // JSON string of factor breakdown
+  calculatedAt        DateTime @default(now())
+
+  @@index([studentId])
+  @@index([category])
+  @@index([calculatedAt])
+}
+
+model Intervention {
+  id            String    @id @default(uuid())
+  studentId     String
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  staffId       String
+  staff         Teacher   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  subjectId     String?
+  subject       Subject?  @relation(fields: [subjectId], references: [id])
+  type          String    // "Academic Counselling" | "Remedial Classes" | "Mentor Meeting" | "Study-plan Review" | "Parent/Guardian Meeting"
+  category      String    @default("ACADEMIC") // "ACADEMIC" | "ATTENDANCE" | "PERFORMANCE" | "BEHAVIORAL"
+  priority      String    @default("MEDIUM") // "URGENT" | "HIGH" | "MEDIUM" | "LOW"
+  actionPlan    String?
+  notes         String
+  outcome       String?
+  targetDate    DateTime?
+  followUpDate  DateTime?
+  progressNotes String?   // JSON serialized array of timeline notes
+  status        String    @default("OPEN") // "OPEN" | "IN_PROGRESS" | "RESOLVED" | "FOLLOW_UP_REQUIRED" | "CANCELLED"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([studentId])
+  @@index([staffId])
+  @@index([subjectId])
+  @@index([status])
+  @@index([priority])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "ACADEMIC_ALERT" | "EXAM_SCHEDULE" | "RISK_CHANGE" | "INTERVENTION_UPDATE" | "PROGRESS_REPORT"
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model EmailLog {
+  id           String   @id @default(uuid())
+  recipient    String
+  emailType    String
+  eventKey     String?  // Deduplication identifier
+  status       String   // "SENT" | "FAILED" | "DRY_RUN"
+  errorMessage String?
+  attemptCount Int      @default(1)
+  sentAt       DateTime @default(now())
+
+  @@index([recipient])
+  @@index([eventKey])
+  @@index([sentAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String
+  action     String   // "CREATE", "UPDATE", "DELETE", "LOGIN", "EXPORT_REPORT"
+  metadata   String?  // JSON string
+  timestamp  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType])
+  @@index([timestamp])
+}
+
+model SystemSetting {
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model AcademicImportBatch {
+  id          String   @id @default(uuid())
+  actorId     String
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  importType  String   // "STUDENTS" | "INTERNAL_MARKS" | "SEMESTER_RESULTS" | "ATTENDANCE"
+  filename    String
+  totalRows   Int
+  successRows Int
+  errorRows   Int
+  status      String   @default("COMPLETED") // "COMPLETED" | "PARTIAL" | "FAILED"
+  errorsJson  String?  // JSON string
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([importType])
+  @@index([createdAt])
+}
+
+model InstitutionalSyncLog {
+  id            String   @id @default(uuid())
+  systemName    String   // e.g. "Institutional SIS / ERP Adapter"
+  endpoint      String
+  syncType      String   // "SCHEDULED" | "MANUAL"
+  status        String   // "SUCCESS" | "WARNING" | "FAILED"
+  recordsSynced Int
+  durationMs    Int
+  details       String?  // JSON or text
+  syncedAt      DateTime @default(now())
+
+  @@index([systemName])
+  @@index([syncedAt])
+}
+
