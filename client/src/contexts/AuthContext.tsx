@@ -16,14 +16,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const extractUser = (res: any): User | null => {
+  if (!res) return null;
+  if (res.user && typeof res.user === 'object') {
+    return extractUser(res.user);
+  }
+  if (res.data && typeof res.data === 'object') {
+    return extractUser(res.data);
+  }
+  return res as User;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await api.get<{ user: User }>('/auth/me');
-      setUser(response.user);
+      const response = await api.get<any>('/auth/me');
+      const currentUser = extractUser(response);
+      setUser(currentUser);
     } catch {
       setUser(null);
     } finally {
@@ -36,21 +48,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshUser]);
 
   const login = async (credentials: { email: string; password: string; role?: UserRole }): Promise<User> => {
-    const response = await api.post<{ user: User }>('/auth/login', credentials);
-    setUser(response.user);
-    return response.user;
+    const response = await api.post<any>('/auth/login', credentials);
+    const currentUser = extractUser(response);
+    if (!currentUser) {
+      throw new Error('Authentication failed. No user details returned.');
+    }
+    setUser(currentUser);
+    return currentUser;
   };
 
   const registerStudent = async (data: any): Promise<User> => {
-    const response = await api.post<{ user: User }>('/auth/register-student', data);
-    setUser(response.user);
-    return response.user;
+    const response = await api.post<any>('/auth/register-student', data);
+    const currentUser = extractUser(response);
+    if (!currentUser) {
+      throw new Error('Registration failed. No student details returned.');
+    }
+    setUser(currentUser);
+    return currentUser;
   };
 
   const registerTeacher = async (data: any): Promise<User> => {
-    const response = await api.post<{ user: User }>('/auth/register-teacher', data);
-    setUser(response.user);
-    return response.user;
+    const response = await api.post<any>('/auth/register-teacher', data);
+    const currentUser = extractUser(response);
+    if (!currentUser) {
+      throw new Error('Registration failed. No teacher details returned.');
+    }
+    setUser(currentUser);
+    return currentUser;
   };
 
   const logout = async (): Promise<void> => {

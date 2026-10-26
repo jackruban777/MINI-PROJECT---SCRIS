@@ -91,7 +91,7 @@ export const StudentLayout: React.FC = () => {
             <span className="text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
               Sem {user?.studentProfile?.currentSemester} - Sec {user?.studentProfile?.section}
             </span>
-            <span className="text-slate-500">{user?.department.split(' ')[0]}</span>
+            <span className="text-slate-500">{user?.department?.split(' ')[0] || ''}</span>
           </div>
         </div>
 

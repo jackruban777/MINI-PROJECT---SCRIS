@@ -19,7 +19,7 @@ export const LoginPage: React.FC = () => {
 
   // If already logged in, redirect to respective dashboard
   useEffect(() => {
-    if (user) {
+    if (user?.role) {
       if (user.role === 'STUDENT') navigate('/student/dashboard');
       else if (user.role === 'TEACHER' || user.role === 'ADMIN') navigate('/teacher/dashboard');
     }
@@ -32,7 +32,8 @@ export const LoginPage: React.FC = () => {
 
     try {
       const loggedInUser = await login({ email, password, role: portalRole });
-      if (loggedInUser.role === 'STUDENT') {
+      const targetRole = loggedInUser?.role || user?.role || portalRole;
+      if (targetRole === 'STUDENT') {
         navigate('/student/dashboard');
       } else {
         navigate('/teacher/dashboard');
