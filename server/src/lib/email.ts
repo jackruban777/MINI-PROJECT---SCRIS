@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { prisma } from './prisma';
 import { config } from '../config';
 
@@ -13,9 +13,9 @@ export interface SendEmailOptions {
 }
 
 export class EmailService {
-  private static transporter: nodemailer.Transporter | null = null;
+  private static transporter: Transporter | null = null;
 
-  private static getTransporter(): nodemailer.Transporter | null {
+  private static getTransporter(): Transporter | null {
     if (this.transporter) return this.transporter;
 
     if (config.email.host && config.email.user) {

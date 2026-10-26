@@ -8,13 +8,14 @@ export const validateBody = (schema: ZodSchema) => {
       next();
     } catch (err) {
       if (err instanceof ZodError) {
+        const issues = (err as any).issues || (err as any).errors || [];
         res.status(400).json({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid request payload',
-            details: err.errors.map((e) => ({
-              field: e.path.join('.'),
+            details: issues.map((e: any) => ({
+              field: Array.isArray(e.path) ? e.path.join('.') : String(e.path || ''),
               message: e.message,
             })),
           },
@@ -29,17 +30,18 @@ export const validateBody = (schema: ZodSchema) => {
 export const validateQuery = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      req.query = schema.parse(req.query);
+      req.query = schema.parse(req.query) as any;
       next();
     } catch (err) {
       if (err instanceof ZodError) {
+        const issues = (err as any).issues || (err as any).errors || [];
         res.status(400).json({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid query parameters',
-            details: err.errors.map((e) => ({
-              field: e.path.join('.'),
+            details: issues.map((e: any) => ({
+              field: Array.isArray(e.path) ? e.path.join('.') : String(e.path || ''),
               message: e.message,
             })),
           },
