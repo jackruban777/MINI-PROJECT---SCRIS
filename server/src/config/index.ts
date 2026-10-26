@@ -1,10 +1,17 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+// Guarantee cloud production fallbacks
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'file:./dev.db';
+}
+
 export const config = {
-  port: parseInt(process.env.PORT || '5000', 10),
+  port: parseInt(process.env.PORT || '5001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   jwtSecret: process.env.JWT_SECRET || 'scris_academic_risk_jwt_super_secret_key_2026',
   cookieSecret: process.env.COOKIE_SECRET || 'scris_academic_cookie_secret_key_2026',

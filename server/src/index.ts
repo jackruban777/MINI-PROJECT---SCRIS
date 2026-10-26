@@ -62,13 +62,23 @@ app.get('/', (req, res) => {
 // Central Error Handler
 app.use(errorHandler);
 
+// Global process error handlers
+process.on('uncaughtException', (err) => {
+  console.error('💥 Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Start Server
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(config.port, () => {
+  const host = '0.0.0.0';
+  app.listen(config.port, host, () => {
     console.log(`=======================================================`);
     console.log(`🎓 SCRIS Academic Risk & Intervention Backend API`);
-    console.log(`🚀 Server listening on port ${config.port}`);
-    console.log(`📡 Health endpoint: http://localhost:${config.port}/api/v1/system/health`);
+    console.log(`🚀 Server listening on ${host}:${config.port}`);
+    console.log(`📡 Health endpoint: /api/v1/system/health`);
     console.log(`📧 Notification mode: ${config.email.dryRun ? 'Dry-Run (Logged to DB)' : 'Live SMTP'}`);
     console.log(`=======================================================`);
   });
