@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { AcademicRiskEngine } from './riskEngine';
-
-const prisma = new PrismaClient();
 
 export type SampleProfileType = 'WATCH' | 'CRITICAL' | 'SAFE' | 'SAFE_HIGH';
 

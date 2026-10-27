@@ -79,7 +79,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new ApiError(message, code, details);
   }
 
-  return (data?.data ?? data) as T;
+  const result = (data?.data ?? data) as T;
+  const resToken = data?.token || (typeof result === 'object' && result !== null ? (result as any).token : null);
+  if (resToken && typeof resToken === 'string') {
+    setAuthToken(resToken);
+    if (typeof result === 'object' && result !== null && !('token' in (result as any))) {
+      (result as any).token = resToken;
+    }
+  }
+
+  return result;
 }
 
 export const api = {

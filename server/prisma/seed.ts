@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { ANNA_UNIVERSITY_CURRICULUM } from '../src/config/annaUniversityCurriculum';
+import { setupPredefinedUsers } from '../src/scripts/setupAdminUsers';
 
 const prisma = new PrismaClient();
 
@@ -447,7 +448,8 @@ async function main() {
         },
       });
     }
-  }
+  // Setup predefined administrator accounts (admin@gmail.com & admint@gmail.com)
+  await setupPredefinedUsers();
 
   console.log('🎉 Database seeding completed successfully with ~60 students across 2 departments.');
 }

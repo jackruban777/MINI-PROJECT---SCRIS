@@ -34,9 +34,9 @@ export const LoginPage: React.FC = () => {
       const loggedInUser = await login({ email, password, role: portalRole });
       const targetRole = loggedInUser?.role || user?.role || portalRole;
       if (targetRole === 'STUDENT') {
-        navigate('/student/dashboard');
+        navigate('/student/dashboard', { replace: true });
       } else {
-        navigate('/teacher/dashboard');
+        navigate('/teacher/dashboard', { replace: true });
       }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please verify your credentials.');
@@ -179,9 +179,23 @@ export const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() =>
+                      handleQuickDemo('admin@gmail.com', '11111111', 'STUDENT')
+                    }
+                    className="text-left px-2.5 py-1.5 rounded border border-blue-400 bg-blue-50 hover:bg-blue-100/70 transition-all flex items-center justify-between shadow-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-blue-900">Admin Student</span>
+                      <span className="text-blue-700 font-medium ml-1.5">(admin@gmail.com / 11111111)</span>
+                    </div>
+                    <span className="text-[10px] text-blue-700 font-bold bg-white px-2 py-0.5 rounded border border-blue-300">Quick Login &rarr;</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
                       handleQuickDemo('jack@gmail.com', 'student123', 'STUDENT')
                     }
-                    className="text-left px-2.5 py-1.5 rounded border border-blue-200 bg-blue-50/40 hover:bg-blue-50 transition-all flex items-center justify-between"
+                    className="text-left px-2.5 py-1.5 rounded border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 transition-all flex items-center justify-between"
                   >
                     <div>
                       <span className="font-semibold text-navy">Jack</span>
@@ -234,6 +248,18 @@ export const LoginPage: React.FC = () => {
                 </>
               ) : (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemo('admint@gmail.com', '22222222', 'TEACHER')}
+                    className="text-left px-2.5 py-1.5 rounded border border-indigo-400 bg-indigo-50 hover:bg-indigo-100/70 transition-all flex items-center justify-between shadow-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-indigo-900">Admin Faculty</span>
+                      <span className="text-indigo-700 font-medium ml-1.5">(admint@gmail.com / 22222222)</span>
+                    </div>
+                    <span className="text-[10px] text-indigo-700 font-bold bg-white px-2 py-0.5 rounded border border-indigo-300">Quick Login &rarr;</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleQuickDemo('prof.sharma@scris.edu', 'faculty123', 'TEACHER')}

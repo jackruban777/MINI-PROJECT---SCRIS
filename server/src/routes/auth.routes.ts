@@ -50,243 +50,296 @@ const loginSchema = z.object({
 
 // Student Registration
 router.post('/register-student', validateBody(studentRegisterSchema), async (req: Request, res: Response): Promise<void> => {
-  const { name, registerNumber, email, department, degree, currentSemester, batchYear, section, password } = req.body;
+  try {
+    const { name, registerNumber, email, department, degree, currentSemester, batchYear, section, password } = req.body;
 
-  // Check unique constraints
-  const existingEmail = await prisma.user.findUnique({ where: { email } });
-  if (existingEmail) {
-    res.status(409).json({
-      success: false,
-      error: { code: 'EMAIL_EXISTS', message: 'An account with this email address already exists.' },
-    });
-    return;
-  }
+    // Check unique constraints
+    const existingEmail = await prisma.user.findUnique({ where: { email } });
+    if (existingEmail) {
+      res.status(409).json({
+        success: false,
+        error: { code: 'EMAIL_EXISTS', message: 'An account with this email address already exists.' },
+      });
+      return;
+    }
 
-  const existingReg = await prisma.student.findUnique({ where: { registerNumber } });
-  if (existingReg) {
-    res.status(409).json({
-      success: false,
-      error: { code: 'REGISTER_EXISTS', message: 'A student with this register number already exists.' },
-    });
-    return;
-  }
+    const existingReg = await prisma.student.findUnique({ where: { registerNumber } });
+    if (existingReg) {
+      res.status(409).json({
+        success: false,
+        error: { code: 'REGISTER_EXISTS', message: 'A student with this register number already exists.' },
+      });
+      return;
+    }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      passwordHash,
-      role: 'STUDENT',
-      department,
-      studentProfile: {
-        create: {
-          registerNumber,
-          degree,
-          currentSemester,
-          batchYear,
-          section,
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: 'STUDENT',
+        department,
+        studentProfile: {
+          create: {
+            registerNumber,
+            degree,
+            currentSemester,
+            batchYear,
+            section,
+          },
         },
       },
-    },
-    include: {
-      studentProfile: true,
-    },
-  });
-
-  // Auto-provision realistic predefined academic data so student portal is never blank
-  if (user.studentProfile?.id) {
-    try {
-      await StudentSampleDataService.populatePredefinedData(user.studentProfile.id, 'WATCH');
-    } catch (seedErr) {
-      console.warn('Auto-provisioning predefined student data encountered a non-fatal warning:', seedErr);
-    }
-  }
-
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    role: 'STUDENT',
-    department: user.department,
-    studentId: user.studentProfile?.id,
-  });
-
-  setAuthCookie(res, token);
-
-  res.status(201).json({
-    success: true,
-    data: {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        department: user.department,
-        studentProfile: user.studentProfile,
+      include: {
+        studentProfile: true,
       },
+    });
+
+    // Auto-provision realistic predefined academic data so student portal is never blank
+    if (user.studentProfile?.id) {
+      try {
+        await StudentSampleDataService.populatePredefinedData(user.studentProfile.id, 'WATCH');
+      } catch (seedErr) {
+        console.warn('Auto-provisioning predefined student data encountered a non-fatal warning:', seedErr);
+      }
+    }
+
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: 'STUDENT',
+      department: user.department,
+      studentId: user.studentProfile?.id,
+    });
+
+    setAuthCookie(res, token);
+
+    const userPayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      studentProfile: user.studentProfile,
+    };
+
+    res.status(201).json({
+      success: true,
+      user: userPayload,
+      student: user.studentProfile,
+      studentProfile: user.studentProfile,
       token,
-    },
-  });
+      data: {
+        user: userPayload,
+        student: user.studentProfile,
+        studentProfile: user.studentProfile,
+        token,
+      },
+    });
+  } catch (err: any) {
+    console.error('Student registration error:', err);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'REGISTRATION_FAILED',
+        message: err.message || 'An unexpected error occurred during student registration.',
+      },
+    });
+  }
 });
 
 // Teacher Registration
 router.post('/register-teacher', validateBody(teacherRegisterSchema), async (req: Request, res: Response): Promise<void> => {
-  const { name, staffId, email, department, designation, inviteCode, password } = req.body;
+  try {
+    const { name, staffId, email, department, designation, inviteCode, password } = req.body;
 
-  // Verify privileged invitation code
-  if (inviteCode !== config.teacherInviteCode) {
-    res.status(403).json({
-      success: false,
-      error: { code: 'INVALID_INVITE_CODE', message: 'Invalid faculty authorization key.' },
-    });
-    return;
-  }
+    // Verify privileged invitation code
+    if (inviteCode !== config.teacherInviteCode) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'INVALID_INVITE_CODE', message: 'Invalid faculty authorization key.' },
+      });
+      return;
+    }
 
-  const existingEmail = await prisma.user.findUnique({ where: { email } });
-  if (existingEmail) {
-    res.status(409).json({
-      success: false,
-      error: { code: 'EMAIL_EXISTS', message: 'An account with this email address already exists.' },
-    });
-    return;
-  }
+    const existingEmail = await prisma.user.findUnique({ where: { email } });
+    if (existingEmail) {
+      res.status(409).json({
+        success: false,
+        error: { code: 'EMAIL_EXISTS', message: 'An account with this email address already exists.' },
+      });
+      return;
+    }
 
-  const existingStaff = await prisma.teacher.findUnique({ where: { staffId } });
-  if (existingStaff) {
-    res.status(409).json({
-      success: false,
-      error: { code: 'STAFF_ID_EXISTS', message: 'A faculty member with this staff ID is already registered.' },
-    });
-    return;
-  }
+    const existingStaff = await prisma.teacher.findUnique({ where: { staffId } });
+    if (existingStaff) {
+      res.status(409).json({
+        success: false,
+        error: { code: 'STAFF_ID_EXISTS', message: 'A faculty member with this staff ID is already registered.' },
+      });
+      return;
+    }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      passwordHash,
-      role: 'TEACHER',
-      department,
-      teacherProfile: {
-        create: {
-          staffId,
-          designation,
-          department,
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: 'TEACHER',
+        department,
+        teacherProfile: {
+          create: {
+            staffId,
+            designation,
+            department,
+          },
         },
       },
-    },
-    include: {
-      teacherProfile: true,
-    },
-  });
-
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    role: 'TEACHER',
-    department: user.department,
-    teacherId: user.teacherProfile?.id,
-  });
-
-  setAuthCookie(res, token);
-
-  res.status(201).json({
-    success: true,
-    data: {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        department: user.department,
-        teacherProfile: user.teacherProfile,
+      include: {
+        teacherProfile: true,
       },
+    });
+
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: 'TEACHER',
+      department: user.department,
+      teacherId: user.teacherProfile?.id,
+    });
+
+    setAuthCookie(res, token);
+
+    const teacherPayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      teacherProfile: user.teacherProfile,
+    };
+
+    res.status(201).json({
+      success: true,
+      user: teacherPayload,
+      teacher: user.teacherProfile,
+      teacherProfile: user.teacherProfile,
       token,
-    },
-  });
+      data: {
+        user: teacherPayload,
+        teacher: user.teacherProfile,
+        teacherProfile: user.teacherProfile,
+        token,
+      },
+    });
+  } catch (err: any) {
+    console.error('Teacher registration error:', err);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'REGISTRATION_FAILED',
+        message: err.message || 'An unexpected error occurred during faculty registration.',
+      },
+    });
+  }
 });
 
 // Login
 router.post('/login', validateBody(loginSchema), async (req: Request, res: Response): Promise<void> => {
-  const { email, password, role } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      studentProfile: true,
-      teacherProfile: true,
-    },
-  });
-
-  if (!user) {
-    res.status(401).json({
-      success: false,
-      error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email address or password.' },
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        studentProfile: true,
+        teacherProfile: true,
+      },
     });
-    return;
-  }
 
-  // Validate expected role if specified by the user's login portal
-  if (role && user.role !== role) {
-    res.status(403).json({
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email address or password.' },
+      });
+      return;
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!isValidPassword) {
+      res.status(401).json({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email address or password.' },
+      });
+      return;
+    }
+
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role as any,
+      department: user.department,
+      studentId: user.studentProfile?.id,
+      teacherId: user.teacherProfile?.id,
+    });
+
+    setAuthCookie(res, token);
+
+    // Audit log login safely
+    try {
+      await prisma.auditLog.create({
+        data: {
+          actorId: user.id,
+          entityType: 'User',
+          entityId: user.id,
+          action: 'LOGIN',
+          metadata: JSON.stringify({ ip: req.ip, userAgent: req.headers['user-agent'] }),
+        },
+      });
+    } catch {
+      // Non-critical audit log failure
+    }
+
+    const userPayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      studentProfile: user.studentProfile,
+      teacherProfile: user.teacherProfile,
+    };
+
+    res.status(200).json({
+      success: true,
+      user: userPayload,
+      student: user.studentProfile,
+      studentProfile: user.studentProfile,
+      teacher: user.teacherProfile,
+      teacherProfile: user.teacherProfile,
+      token,
+      data: {
+        user: userPayload,
+        student: user.studentProfile,
+        studentProfile: user.studentProfile,
+        teacher: user.teacherProfile,
+        teacherProfile: user.teacherProfile,
+        token,
+      },
+    });
+  } catch (err: any) {
+    console.error('Login error:', err);
+    res.status(500).json({
       success: false,
       error: {
-        code: 'ROLE_MISMATCH',
-        message: `This account is registered as a ${user.role}. Please use the ${user.role.toLowerCase()} portal to sign in.`,
+        code: 'LOGIN_FAILED',
+        message: err.message || 'An unexpected error occurred during sign in.',
       },
     });
-    return;
   }
-
-  const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-  if (!isValidPassword) {
-    res.status(401).json({
-      success: false,
-      error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email address or password.' },
-    });
-    return;
-  }
-
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role as any,
-    department: user.department,
-    studentId: user.studentProfile?.id,
-    teacherId: user.teacherProfile?.id,
-  });
-
-  setAuthCookie(res, token);
-
-  // Audit log login
-  await prisma.auditLog.create({
-    data: {
-      actorId: user.id,
-      entityType: 'User',
-      entityId: user.id,
-      action: 'LOGIN',
-      metadata: JSON.stringify({ ip: req.ip, userAgent: req.headers['user-agent'] }),
-    },
-  });
-
-  res.status(200).json({
-    success: true,
-    data: {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        department: user.department,
-        studentProfile: user.studentProfile,
-        teacherProfile: user.teacherProfile,
-      },
-      token,
-    },
-  });
 });
 
 // Logout
